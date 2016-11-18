@@ -1,7 +1,5 @@
 from distutils.core import setup
 
-from setuptools import find_packages
-
 setup(
     name='webike_dbimport',
     version='0.5.0',
@@ -15,7 +13,7 @@ setup(
     author='Information Systems and Science for Energy',
     author_email='webike-dev@lists.uwaterloo.ca',
     description='WeBike data import into database',
-    packages=find_packages(),
+    packages=['iss4e', 'iss4e.webike', 'iss4e.webike.db'],
     install_requires=[
         'iss4e_toolchain>=0.1.0'
     ]
