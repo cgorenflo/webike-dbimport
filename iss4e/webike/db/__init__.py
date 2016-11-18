@@ -1,1 +1,1 @@
-__import__('pkg_resources').declare_namespace(__name__)
+from iss4e.webike.db import import_data
