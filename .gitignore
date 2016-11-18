@@ -1,7 +1,10 @@
 /.idea/
 /iss4e.conf
 /iss4e/__pycache__
+/iss4e/webike/__pycache__
+/iss4e/webike/db/__pycache__
 /webike-dbimport.pyproj
+*.egg-info
 /.vs/
 *.sln
 *.pyproj.user
