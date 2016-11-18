@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='webike_dbimport',
@@ -13,8 +13,8 @@ setup(
     author='Information Systems and Science for Energy',
     author_email='webike-dev@lists.uwaterloo.ca',
     description='WeBike data import into database',
-    packages=['iss4e.webike.db'],
-    scripts=['scripts/import_data'],
+    packages=find_packages(),
+    scripts=['iss4e/webike/db/import_data'],
     install_requires=[
         'iss4e_toolchain>=0.1.0'
     ]
