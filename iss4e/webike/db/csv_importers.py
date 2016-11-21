@@ -43,7 +43,7 @@ class CSVImporter(object):
     def _get_value(self, value):
         try:
             return ast.literal_eval(value.title())
-        except ValueError:
+        except (ValueError, SyntaxError):
             return value
 
     @abstractmethod
