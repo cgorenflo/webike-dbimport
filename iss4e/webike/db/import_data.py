@@ -26,7 +26,7 @@ def _get_log_file_paths() -> Iterator[Tuple[str, str]]:
     """
 
     directory_regex_pattern = config["webike.imei_regex"]
-    file_regex_pattern = config["webike.imei_regex"]
+    file_regex_pattern = config["webike.logfile_regex"]
     home, dirs, _ = next(os.walk(os.path.expanduser("~")))
     for directory in dirs:
         if re.fullmatch(directory_regex_pattern, directory):
@@ -54,10 +54,10 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dic
     """
     :param path_and_data: an iterator over directories, log file names of their data
     """
-
+    print(config["webike.influx"])
     with influxdb.connect(**config["webike.influx"]) as client:
         for directory, filename, data in path_and_data:
-            client.write(data)
+            client.write(data, {"db": config["webike.influx.database"]})
             _archive_log(directory, filename)
 
 

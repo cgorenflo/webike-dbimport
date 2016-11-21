@@ -35,5 +35,4 @@ class V3Formatter(Formatter):
         return dict([key, ast.literal_eval(value.title())] for key, value in row.items() if value)
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
-        print(row)
         return "IMEI" in row.keys()
