@@ -8,10 +8,6 @@ from typing import Iterator, Tuple
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
 
 
-def _get_fields_with_correct_data_type(row: dict) -> dict:
-    return dict([key, ast.literal_eval(value.title())] for key, value in row.items() if value)
-
-
 class CSVImporter(object):
     __metaclass__ = ABCMeta
 
@@ -37,8 +33,12 @@ class CSVImporter(object):
                             "tags": {"imei": self._get_imei(row),
                                      "code_version": ast.literal_eval(row.pop("code_version"))},
                             "time": row.pop("timestamp"),
-                            "fields": _get_fields_with_correct_data_type(row)
+                            "fields": self._get_fields_with_correct_data_type(row)
                             } for row in reader if self._filter_for_correct_log_format(row)]}
+
+    def _get_fields_with_correct_data_type(self, row: dict) -> dict:
+        return dict([key, ast.literal_eval(value.title())] for key, value in row.items() if
+                    self._filter_for_correct_value_format(value))
 
     @abstractmethod
     def _get_imei(self, row: dict) -> str:
@@ -49,18 +49,25 @@ class CSVImporter(object):
         pass
 
     @abstractmethod
+    def _filter_for_correct_value_format(self, value: str) -> bool:
+        pass
+
+    @abstractmethod
     def _get_reader(self, csv_file: TextIOWrapper, file_directory: str) -> DictReader:
         pass
 
 
 class LegacyImporter(CSVImporter):
+    def _filter_for_correct_value_format(self, value: str) -> bool:
+        return value and value.lower() is not "null" and value.lower() is not "nan"
+
     def _get_imei(self, row: dict) -> str:
         return self.imei
 
     def _get_reader(self, csv_file: TextIOWrapper, file_directory: str) -> DictReader:
         self.imei = os.path.basename(os.path.normpath(file_directory))
         return DictReader(csv_file, fieldnames=["timestamp",
-                                                "class"
+                                                "class",
                                                 "code_version",
                                                 "latitude",
                                                 "longitude",
@@ -97,6 +104,9 @@ class LegacyImporter(CSVImporter):
 
 
 class WellFormedCSVImporter(CSVImporter):
+    def _filter_for_correct_value_format(self, value: str) -> bool:
+        return value
+
     def _get_imei(self, row: dict) -> str:
         return row.pop("IMEI")
 
