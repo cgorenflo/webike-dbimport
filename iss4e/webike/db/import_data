@@ -8,6 +8,7 @@ from typing import Iterator, Tuple
 import iss4e.db.influxdb as influxdb
 from iss4e.util.config import load_config
 
+import iss4e.webike.db.module_locator as module_locator
 from iss4e.webike.db.csv_formatters import *
 
 
@@ -65,9 +66,9 @@ def _archive_log(directory: str, filename: str):
     os.rename(os.path.join(directory, filename), os.path.join(directory, config["webike.archive"], filename))
 
 
-config = load_config()
+config = load_config(module_locator.module_path())
 
-if sys.argv:
-    import_data(sys.argv)
+if len(sys.argv) > 1:
+    import_data(sys.argv[1])
 else:
     import_data()
