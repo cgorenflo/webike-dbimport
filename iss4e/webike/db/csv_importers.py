@@ -104,4 +104,4 @@ class WellFormedCSVImporter(CSVImporter):
         return DictReader(csv_file)
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
-        return ast.literal_eval(row["code_version"]) >= NEW_IMPORT_FORMAT_CODE_VERSION
+        return "code_version" in row.keys() and ast.literal_eval(row["code_version"]) >= NEW_IMPORT_FORMAT_CODE_VERSION
