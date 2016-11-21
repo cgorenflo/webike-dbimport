@@ -16,7 +16,6 @@ def import_data(version: str = "v3"):
     csv_formatters = {"v1": V1Formatter(), "v2": V2Formatter(), "v3": V3Formatter()}
 
     log_file_paths = _get_log_file_paths()
-    print(version)
     logs = _read_logs(log_file_paths, csv_formatters[version])
     _insert_into_db_and_archive_logs(logs)
 
@@ -56,7 +55,7 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dic
     :param path_and_data: an iterator over directories, log file names of their data
     """
 
-    with influxdb.connect(config["webike.influx"]) as client:
+    with influxdb.connect(**config["webike.influx"]) as client:
         for directory, filename, data in path_and_data:
             client.write(data)
             _archive_log(directory, filename)

@@ -14,7 +14,7 @@ setup(
     author_email='webike-dev@lists.uwaterloo.ca',
     description='WeBike data import into database',
     packages=find_packages(),
-    scripts=['iss4e/webike/db/import_data'],
+    scripts=['iss4e/webike/db/import_data.py'],
     install_requires=[
         'iss4e_toolchain>=0.1.0'
     ]
