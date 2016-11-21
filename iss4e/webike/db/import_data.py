@@ -9,14 +9,14 @@ import iss4e.db.influxdb as influxdb
 from iss4e.util.config import load_config
 
 import iss4e.webike.db.module_locator as module_locator
-from iss4e.webike.db.csv_formatters import *
+from iss4e.webike.db.csv_importers import *
 
 
-def import_data(version: str = "v3"):
-    csv_formatters = {"v1": V1Formatter(), "v2": V2Formatter(), "v3": V3Formatter()}
+def import_data(version: str = "current"):
+    csv_importers = {"legacy": LegacyImporter(), "current": WellFormedCSVImporter()}
 
     log_file_paths = _get_log_file_paths()
-    logs = _read_logs(log_file_paths, csv_formatters[version])
+    logs = csv_importers[version].read_logs(log_file_paths)
     _insert_into_db_and_archive_logs(logs)
 
 
@@ -34,20 +34,6 @@ def _get_log_file_paths() -> Iterator[Tuple[str, str]]:
             for file in files:
                 if re.fullmatch(file_regex_pattern, file):
                     yield current_directory, file
-
-
-def _read_logs(log_file_paths: Iterator[Tuple[str, str]], formatter: Formatter) -> Iterator[Tuple[str, str, dict]]:
-    """
-    :param log_file_paths: An iterator over directories and log file names
-    :returns an iterator over directories, log file names of their data
-    """
-
-    for directory, file_name in log_file_paths:
-        with open(os.path.join(directory, file_name)) as csv_file:
-            reader = csv.DictReader(csv_file)
-            data = formatter.format(reader)
-            if data["points"]:
-                yield directory, file_name, data
 
 
 def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dict]]):
