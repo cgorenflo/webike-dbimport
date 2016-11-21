@@ -60,7 +60,7 @@ class CSVImporter(object):
 class LegacyImporter(CSVImporter):
     def _filter_for_correct_value_format(self, value: str) -> bool:
         print(value)
-        return value and value.lower() is not "null" and value.lower() is not "nan"
+        return value and value.lower() != "null" and value.lower() != "nan"
 
     def _get_imei(self, row: dict) -> str:
         return self.imei
