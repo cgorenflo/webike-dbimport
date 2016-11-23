@@ -44,7 +44,7 @@ class CSVImporter(object):
         try:
             # parse boolean values to python upper case spelling with str.title()
             return ast.literal_eval(value.title())
-        except (ValueError, SyntaxError):
+        except (ValueError, SyntaxError):            
             return value
 
     @abstractmethod
@@ -107,7 +107,11 @@ class LegacyImporter(CSVImporter):
                                                 "discharge_current"])
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
-        return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
+        try:
+            return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
+        except (ValueError, SyntaxError):
+            #print(row)
+            return False
 
 
 class WellFormedCSVImporter(CSVImporter):

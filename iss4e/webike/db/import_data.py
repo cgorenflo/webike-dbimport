@@ -52,8 +52,11 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dic
     """
     with influxdb.connect(**config["webike.influx"]) as client:
         for directory, filename, data in path_and_data:
-            client.write(data, {"db": config["webike.influx.database"]})
-            _archive_log(directory, filename)
+            try:
+                client.write(data, {"db": config["webike.influx.database"]})
+                _archive_log(directory, filename)
+            except:
+                print("Error with file " + filename + " in directory " + directory)
 
 
 def _archive_log(directory: str, filename: str):
