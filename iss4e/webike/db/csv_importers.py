@@ -31,7 +31,7 @@ class CSVImporter(object):
         """
         return {"points": [{"measurement": "sensor_data",
                             "tags": {"imei": self._get_imei(row),
-                                     "code_version": ast.literal_eval(row.pop("code_version"))},
+                                     "code_version": row.pop("code_version")},
                             "time": row.pop("timestamp"),
                             "fields": self._get_fields_with_correct_data_type(row)
                             } for row in reader if self._filter_for_correct_log_format(row)]}
@@ -40,8 +40,9 @@ class CSVImporter(object):
         return dict([key, self._get_value(value)] for key, value in row.items() if
                     self._filter_for_correct_value_format(value))
 
-    def _get_value(self, value):
+    def _get_value(self, value: str):
         try:
+            # parse boolean values to python upper case spelling with str.title()
             return ast.literal_eval(value.title())
         except (ValueError, SyntaxError):
             return value
@@ -65,7 +66,6 @@ class CSVImporter(object):
 
 class LegacyImporter(CSVImporter):
     def _filter_for_correct_value_format(self, value: str) -> bool:
-        print(value)
         return value and value.lower() != "null" and value.lower() != "nan"
 
     def _get_imei(self, row: dict) -> str:
@@ -100,7 +100,7 @@ class LegacyImporter(CSVImporter):
                                                 "ambient_temperature",
                                                 "voltage",
                                                 "charging_current",
-                                                "significant_motion"
+                                                "significant_motion",
                                                 "proximity_sensor",
                                                 "phone_ip",
                                                 "phone_battery_state",

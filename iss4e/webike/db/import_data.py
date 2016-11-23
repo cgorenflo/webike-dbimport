@@ -1,9 +1,19 @@
 #!/usr/bin/python3.5
 
-import os
+"""Imports all sensor data log files in the imei folders into the influxdb database
+
+Usage:
+  import_data.py [-l | --legacy]
+
+Options:
+  -h --help     Show this screen.
+  -l --legacy   Use legacy parser for old data formats
+
+"""
+
 import re
 import sys
-from typing import Iterator, Tuple
+import docopt
 
 import iss4e.db.influxdb as influxdb
 from iss4e.util.config import load_config

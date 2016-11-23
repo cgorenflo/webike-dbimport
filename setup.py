@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='webike_dbimport',
+    name='webike-dbimport',
     version='0.5.0',
     url='https://github.com/iss4e/webike-dbimport.git',
     license='MIT',
