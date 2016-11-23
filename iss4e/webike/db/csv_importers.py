@@ -43,7 +43,7 @@ class CSVImporter(object):
     def _get_value(self, value):
         try:
             return ast.literal_eval(value.title())
-        except (ValueError, SyntaxError):
+        except (ValueError, SyntaxError):            
             return value
 
     @abstractmethod
@@ -65,7 +65,6 @@ class CSVImporter(object):
 
 class LegacyImporter(CSVImporter):
     def _filter_for_correct_value_format(self, value: str) -> bool:
-        print(value)
         return value and value.lower() != "null" and value.lower() != "nan"
 
     def _get_imei(self, row: dict) -> str:
@@ -100,14 +99,18 @@ class LegacyImporter(CSVImporter):
                                                 "ambient_temperature",
                                                 "voltage",
                                                 "charging_current",
-                                                "significant_motion"
+                                                "significant_motion",
                                                 "proximity_sensor",
                                                 "phone_ip",
                                                 "phone_battery_state",
                                                 "discharge_current"])
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
-        return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
+        try:
+            return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
+        except (ValueError, SyntaxError):
+            #print(row)
+            return False
 
 
 class WellFormedCSVImporter(CSVImporter):
