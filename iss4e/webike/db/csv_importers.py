@@ -110,7 +110,6 @@ class LegacyImporter(CSVImporter):
         try:
             return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
         except (ValueError, SyntaxError):
-            #print(row)
             return False
 
 

@@ -12,8 +12,7 @@ Options:
 """
 
 import re
-import sys
-import docopt
+from docopt import docopt
 
 import iss4e.db.influxdb as influxdb
 from iss4e.util.config import load_config
@@ -22,11 +21,11 @@ import iss4e.webike.db.module_locator as module_locator
 from iss4e.webike.db.csv_importers import *
 
 
-def import_data(version: str = "current"):
-    csv_importers = {"legacy": LegacyImporter(), "current": WellFormedCSVImporter()}
+def import_data():
+    csv_importer = LegacyImporter() if docopt(__doc__)["--legacy"] else WellFormedCSVImporter()
 
     log_file_paths = _get_log_file_paths()
-    logs = csv_importers[version].read_logs(log_file_paths)
+    logs = csv_importer.read_logs(log_file_paths)
     _insert_into_db_and_archive_logs(logs)
 
 
@@ -64,8 +63,4 @@ def _archive_log(directory: str, filename: str):
 
 
 config = load_config(module_locator.module_path())
-
-if len(sys.argv) > 1:
-    import_data(sys.argv[1])
-else:
-    import_data()
+import_data()
