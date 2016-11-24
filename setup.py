@@ -16,6 +16,6 @@ setup(
     packages=find_packages(),
     scripts=['iss4e/webike/db/import_data.py'],
     install_requires=[
-        'iss4e_toolchain>=0.1.0'
+        'iss4e_toolchain>=0.1.0', 'docopt'
     ]
 )

@@ -1,11 +1,15 @@
 import ast
+import logging
 import os
 from abc import ABCMeta, abstractmethod
 from csv import DictReader
 from io import TextIOWrapper
 from typing import Iterator, Tuple
 
+from iss4e.util import BraceMessage as __
+
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
+logger = logging.getLogger()
 
 
 class CSVImporter(object):
@@ -16,13 +20,17 @@ class CSVImporter(object):
         :param log_file_paths: An iterator over directories and log file names
         :returns an iterator over directories, log file names of their data
         """
-
+        logger.info("Start reading log files")
         for directory, file_name in log_file_paths:
+            logger.debug(__("Read log file {file}", file=file_name))
             with open(os.path.join(directory, file_name)) as csv_file:
                 reader = self._get_reader(csv_file, directory)
                 data = self._format(reader)
                 if data["points"]:
                     yield directory, file_name, data
+                else:
+                    logger.warning(__("No sensor data read from file {file}", file=file_name))
+                    yield directory, file_name, None
 
     def _format(self, reader: DictReader) -> dict:
         """
@@ -30,8 +38,7 @@ class CSVImporter(object):
         :returns formatted data
         """
         return {"points": [{"measurement": "sensor_data",
-                            "tags": {"imei": self._get_imei(row),
-                                     "code_version": row.pop("code_version")},
+                            "tags": {"imei": self._get_imei(row)},
                             "time": row.pop("timestamp"),
                             "fields": self._get_fields_with_correct_data_type(row)
                             } for row in reader if self._filter_for_correct_log_format(row)]}
@@ -40,11 +47,12 @@ class CSVImporter(object):
         return dict([key, self._get_value(value)] for key, value in row.items() if
                     self._filter_for_correct_value_format(value))
 
-    def _get_value(self, value: str):
+    @staticmethod
+    def _get_value(value: str):
         try:
             # parse boolean values to python upper case spelling with str.title()
             return ast.literal_eval(value.title())
-        except (ValueError, SyntaxError):            
+        except (ValueError, SyntaxError):
             return value
 
     @abstractmethod
@@ -108,8 +116,11 @@ class LegacyImporter(CSVImporter):
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
         try:
+            # old log files contain rows with written log messages instead of sensor data,
+            # so there might be an unparsable string in the 'code_version' field
             return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
         except (ValueError, SyntaxError):
+            logger.debug(__("'code_version' field could not be parsed. Value: {value}", value=row["code_version"]))
             return False
 
 
@@ -124,4 +135,5 @@ class WellFormedCSVImporter(CSVImporter):
         return DictReader(csv_file)
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
+        # old logs don't have a header, so there will be no 'code_version' field
         return "code_version" in row.keys() and ast.literal_eval(row["code_version"]) >= NEW_IMPORT_FORMAT_CODE_VERSION
