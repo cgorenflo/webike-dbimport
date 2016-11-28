@@ -24,6 +24,10 @@ from iss4e.util.config import load_config
 from iss4e.webike.db import module_locator
 from iss4e.webike.db.csv_importers import *
 
+File = str
+Directory = str
+FilePathInfos = Tuple[Directory, Iterator[File]]
+
 
 def import_data():
     logger.info("Start log file import")
@@ -37,20 +41,20 @@ def import_data():
 
     log_file_paths = _get_log_file_paths()
     executor = ProcessPoolExecutor(max_workers=14)
-    futures = [executor.submit(execute_import, csv_importer(), directory, files) for directory, files in log_file_paths]
+    futures = [executor.submit(execute_import, csv_importer(), file_path_infos) for file_path_infos in log_file_paths]
 
     wait(futures)
     logger.info("Import complete")
 
 
-def execute_import(csv_importer: CSVImporter, directory: str, files: Iterator[str]) -> bool:
-    logs = csv_importer.read_logs(directory, files)
+def execute_import(csv_importer: CSVImporter, file_path_infos: FilePathInfos) -> bool:
+    logs = csv_importer.read_logs(file_path_infos[0], file_path_infos[1])
     _insert_into_db_and_archive_logs(logs)
 
     return True
 
 
-def _get_log_file_paths() -> Iterator[Tuple[str, Iterator[str]]]:
+def _get_log_file_paths() -> Iterator[FilePathInfos]:
     """
     :returns an iterator over directories and log file names
     """
@@ -68,9 +72,9 @@ def _get_log_file_paths() -> Iterator[Tuple[str, Iterator[str]]]:
     return []
 
 
-def get_files_in_directory(file_regex_pattern: str, directory_absolute_path: str) -> Iterator[[str]]:
+def get_files_in_directory(file_regex_pattern: str, directory_absolute_path: str) -> Iterator[File]:
     _, _, files = next(os.walk(directory_absolute_path))
-    yield [file for file in files if filter_correct_files(file, file_regex_pattern)]
+    yield (file for file in files if filter_correct_files(file, file_regex_pattern))
     return []
 
 
