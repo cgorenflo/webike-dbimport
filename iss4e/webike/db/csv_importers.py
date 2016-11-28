@@ -29,7 +29,8 @@ class CSVImporter(object):
                 if data["points"]:
                     yield directory, file_name, data
                 else:
-                    logger.warning(__("No sensor data read from file {file}", file=file_name))
+                    logger.warning(
+                        __("No sensor data read from file {file} in directory {dir}", file=file_name, dir=directory))
                     yield directory, file_name, None
 
     def _format(self, reader: DictReader) -> dict:
