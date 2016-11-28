@@ -9,7 +9,7 @@ from typing import Iterator, Tuple
 from iss4e.util import BraceMessage as __
 
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
-logger = logging.getLogger()
+logger = logging.getLogger("iss4e.webike.db")
 
 
 class CSVImporter(object):
