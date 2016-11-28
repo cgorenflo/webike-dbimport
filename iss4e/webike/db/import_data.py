@@ -3,13 +3,17 @@
 """Imports all sensor data log files in the imei folders into the influxdb database
 
 Usage:
-  import_data.py [-l | --legacy] [-s | --strict]
+  import_data.py [FILE] [-l | --legacy] [-s | --strict] [-d | --debug]
+
+Optional Arguments:
+  FILE          Imports a single file
 
 Options:
   -h --help     Show this screen.
   -l --legacy   Use legacy parser for old data formats
   -s --strict   Moves logs that could not be imported into a problem folder.
                 Files stay in place if this is not set
+  -d --debug    Logs messages at DEBUG level
 
 """
 import re
@@ -34,18 +38,30 @@ def import_data():
     else:
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
+    
+    if arguments["FILE"] is not None:
+        directory_path = os.path.dirname(arguments["FILE"])
+        if not os.path.isabs(directory_path):
+            directory_path = os.path.join(os.getcwd(), directory_path)
+        directory = Directory(os.path.basename(directory_path), directory_path)
+        file = os.path.basename(arguments["FILE"])
 
-    directories = _get_directories()
-    with ProcessPoolExecutor(max_workers=14) as executor:
-        futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in directories]
+        _execute_import(csv_importer(), directory, file)
+    else:
+        directories = _get_directories()
+        with ProcessPoolExecutor(max_workers=14) as executor:
+            futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in directories]
 
-        wait(futures)
+            wait(futures)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVImporter, directory: Directory) -> bool:
+def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
-    files = _get_files_in_directory(file_regex_pattern, directory)
+    if file is None:
+        files = _get_files_in_directory(file_regex_pattern, directory)
+    else:
+        files = [file]
     logs = csv_importer.read_logs(directory, files)
     _insert_into_db_and_archive_logs(logs)
 
@@ -124,7 +140,12 @@ def _move_to_subfolder(directory: Directory, filename: str, subfolder: str):
     os.rename(os.path.join(directory.abs_path, filename), os.path.join(directory.abs_path, subfolder, filename))
 
 
-config = load_config(module_locator.module_path())
-logger = logging.getLogger("iss4e.webike.db")
 arguments = docopt(__doc__)
+
+config = load_config(module_locator.module_path())
+logging.config.dictConfig(config["logging"])
+logger = logging.getLogger("iss4e.webike.db")
+if arguments["--debug"]:
+    logger.setLevel(logging.DEBUG)
+
 import_data()
