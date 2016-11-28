@@ -6,10 +6,11 @@ from csv import DictReader
 from io import TextIOWrapper
 from typing import Iterator, Tuple
 
+# noinspection PyPep8Naming
 from iss4e.util import BraceMessage as __
 
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
-logger = logging.getLogger()
+logger = logging.getLogger("iss4e.webike.db")
 
 
 class CSVImporter(object):
@@ -33,6 +34,8 @@ class CSVImporter(object):
                         __("No sensor data read from file {file} in directory {dir}", file=file_name, dir=directory))
                     yield directory, file_name, None
 
+        return []
+
     def _format(self, reader: DictReader) -> dict:
         """
         :param reader: log file data
@@ -45,14 +48,20 @@ class CSVImporter(object):
                             } for row in reader if self._filter_for_correct_log_format(row)]}
 
     def _get_fields_with_correct_data_type(self, row: dict) -> dict:
-        return dict([key, self._get_value(value)] for key, value in row.items() if
+        return dict((key, self._get_value(key, value)) for key, value in row.items() if
                     self._filter_for_correct_value_format(value))
 
     @staticmethod
-    def _get_value(value: str):
+    def _get_value(key: str, value: str):
         try:
             # parse boolean values to python upper case spelling with str.title()
-            return ast.literal_eval(value.title())
+            parsed_value = ast.literal_eval(value.title())
+
+            # some code version entries are in a float format, int is expected
+            if key == "code_version":
+                parsed_value = int(parsed_value)
+
+            return parsed_value
         except (ValueError, SyntaxError):
             return value
 
@@ -127,7 +136,7 @@ class LegacyImporter(CSVImporter):
 
 class WellFormedCSVImporter(CSVImporter):
     def _filter_for_correct_value_format(self, value: str) -> bool:
-        return value
+        return bool(value)
 
     def _get_imei(self, row: dict) -> str:
         return row.pop("IMEI")

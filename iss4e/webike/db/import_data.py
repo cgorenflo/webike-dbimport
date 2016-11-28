@@ -99,6 +99,6 @@ def _move_to_subfolder(directory: str, filename: str, subfolder: str):
 
 
 config = load_config(module_locator.module_path())
-logger = logging.getLogger()
+logger = logging.getLogger("iss4e.webike.db")
 arguments = docopt(__doc__)
 import_data()
