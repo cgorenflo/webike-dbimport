@@ -16,14 +16,13 @@ logger = logging.getLogger("iss4e.webike.db")
 class CSVImporter(object):
     __metaclass__ = ABCMeta
 
-    def read_logs(self, log_file_paths: Iterator[Tuple[str, str]]) -> Iterator[Tuple[str, str, dict]]:
+    def read_logs(self, directory: str, files: Iterator[str]) -> Iterator[Tuple[str, str, dict]]:
         """
-        :param log_file_paths: An iterator over directories and log file names
         :returns an iterator over directories, log file names of their data
         """
         logger.info("Start reading log files")
-        for directory, file_name in log_file_paths:
-            logger.debug(__("Read log file {file}", file=file_name))
+        for file_name in files:
+            logger.debug(__("Read log file {file} in directory {dir}", file=file_name, dir=directory))
             with open(os.path.join(directory, file_name)) as csv_file:
                 reader = self._get_reader(csv_file, directory)
                 data = self._format(reader)

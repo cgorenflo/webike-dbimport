@@ -13,9 +13,11 @@ Options:
 
 """
 import re
+from concurrent.futures import ProcessPoolExecutor, wait
 
 import iss4e.db.influxdb as influxdb
 from docopt import docopt
+# noinspection PyPep8Naming
 from iss4e.util import BraceMessage as __
 from iss4e.util.config import load_config
 
@@ -28,19 +30,27 @@ def import_data():
 
     if arguments["--legacy"]:
         logger.info("Using legacy formatter")
-        csv_importer = LegacyImporter()
+        csv_importer = LegacyImporter
     else:
         logger.info("Using formatter for well formed csv files")
-        csv_importer = WellFormedCSVImporter()
+        csv_importer = WellFormedCSVImporter
 
     log_file_paths = _get_log_file_paths()
-    logs = csv_importer.read_logs(log_file_paths)
-    _insert_into_db_and_archive_logs(logs)
+    executor = ProcessPoolExecutor(max_workers=14)
+    futures = [executor.submit(execute_import, csv_importer(), directory, files) for directory, files in log_file_paths]
 
+    wait(futures)
     logger.info("Import complete")
 
 
-def _get_log_file_paths() -> Iterator[Tuple[str, str]]:
+def execute_import(csv_importer: CSVImporter, directory: str, files: Iterator[str]) -> bool:
+    logs = csv_importer.read_logs(directory, files)
+    _insert_into_db_and_archive_logs(logs)
+
+    return True
+
+
+def _get_log_file_paths() -> Iterator[Tuple[str, Iterator[str]]]:
     """
     :returns an iterator over directories and log file names
     """
@@ -52,13 +62,23 @@ def _get_log_file_paths() -> Iterator[Tuple[str, str]]:
     home, dirs, _ = next(os.walk(os.path.expanduser("~")))
     for directory in dirs:
         if re.fullmatch(directory_regex_pattern, directory):
-            current_directory, _, files = next(os.walk(os.path.join(home, directory)))
-            logger.debug(__("Collect logs in directory {directory}", directory=current_directory))
+            logger.debug(__("Collect logs in directory {directory}", directory=directory))
+            yield directory, get_files_in_directory(file_regex_pattern, os.path.join(home, directory))
 
-            for file in files:
-                if re.fullmatch(file_regex_pattern, file):
-                    logger.debug(__("Collect log file {log}", log=file))
-                    yield current_directory, file
+    return []
+
+
+def get_files_in_directory(file_regex_pattern: str, directory_absolute_path: str) -> Iterator[[str]]:
+    _, _, files = next(os.walk(directory_absolute_path))
+    yield [file for file in files if filter_correct_files(file, file_regex_pattern)]
+    return []
+
+
+def filter_correct_files(file: str, regex: str) -> bool:
+    if re.fullmatch(regex, file):
+        logger.debug(__("Collect log file {log}", log=file))
+        return True
+    return False
 
 
 def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dict]]):
