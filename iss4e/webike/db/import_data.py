@@ -103,8 +103,10 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
                 elif arguments["--strict"]:
                     _move_to_problem_folder(directory, filename)
             # try to import as many logs as possible, so just log any unexpected exceptions and keep going
+            except KeyboardInterrupt:
+                logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename, directory=directory.name))
             except:
-                logger.error(__("Error with file {filename} in {directory}", filename=filename, directory=directory))
+                logger.error(__("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
                 _move_to_problem_folder(directory, filename)
 
 
