@@ -24,10 +24,6 @@ from iss4e.util.config import load_config
 from iss4e.webike.db import module_locator
 from iss4e.webike.db.csv_importers import *
 
-File = str
-Directory = str
-FilePathInfos = Tuple[Directory, Iterator[File]]
-
 
 def import_data():
     logger.info("Start log file import")
@@ -39,53 +35,57 @@ def import_data():
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
 
-    log_file_paths = _get_log_file_paths()
-    executor = ProcessPoolExecutor(max_workers=14)
-    futures = [executor.submit(execute_import, csv_importer(), file_path_infos) for file_path_infos in log_file_paths]
+    directories = _get_directories()
+    with ProcessPoolExecutor(max_workers=14) as executor:
+        futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in directories]
 
-    wait(futures)
+        wait(futures)
     logger.info("Import complete")
 
 
-def execute_import(csv_importer: CSVImporter, file_path_infos: FilePathInfos) -> bool:
-    logs = csv_importer.read_logs(file_path_infos[0], file_path_infos[1])
+def _execute_import(csv_importer: CSVImporter, directory: Directory) -> bool:
+    file_regex_pattern = config["webike.logfile_regex"]
+    files = _get_files_in_directory(file_regex_pattern, directory)
+    logs = csv_importer.read_logs(directory, files)
     _insert_into_db_and_archive_logs(logs)
 
     return True
 
 
-def _get_log_file_paths() -> Iterator[FilePathInfos]:
+def _get_directories() -> Iterator[Directory]:
     """
     :returns an iterator over directories and log file names
     """
-    logger.info("Start collecting log files")
+    logger.info("Start collecting log file directories")
 
     directory_regex_pattern = config["webike.imei_regex"]
-    file_regex_pattern = config["webike.logfile_regex"]
 
     home, dirs, _ = next(os.walk(os.path.expanduser("~")))
     for directory in dirs:
         if re.fullmatch(directory_regex_pattern, directory):
-            logger.debug(__("Collect logs in directory {directory}", directory=directory))
-            yield directory, get_files_in_directory(file_regex_pattern, os.path.join(home, directory))
+            yield Directory(directory, os.path.join(home, directory))
 
     return []
 
 
-def get_files_in_directory(file_regex_pattern: str, directory_absolute_path: str) -> Iterator[File]:
-    _, _, files = next(os.walk(directory_absolute_path))
-    yield (file for file in files if filter_correct_files(file, file_regex_pattern))
+def _get_files_in_directory(file_regex_pattern: str, directory: Directory) -> Iterator[File]:
+    logger.debug(__("Collect logs in directory {directory}", directory=directory.name))
+    _, _, files = next(os.walk(directory.abs_path))
+    for file in files:
+        if _filter_correct_files(file, file_regex_pattern):
+            yield file
+
     return []
 
 
-def filter_correct_files(file: str, regex: str) -> bool:
+def _filter_correct_files(file: str, regex: str) -> bool:
     if re.fullmatch(regex, file):
         logger.debug(__("Collect log file {log}", log=file))
         return True
     return False
 
 
-def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dict]]):
+def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, File, Data]]):
     """
     :param path_and_data: an iterator over directories, log file names of their data
     """
@@ -108,18 +108,18 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[str, str, dic
                 _move_to_problem_folder(directory, filename)
 
 
-def _archive_log(directory: str, filename: str):
-    logger.debug(__("Archive file {file} in directory {dir}", file=filename, dir=directory))
+def _archive_log(directory: Directory, filename: File):
+    logger.debug(__("Archive file {file} in directory {dir}", file=filename, dir=directory.name))
     _move_to_subfolder(directory, filename, config["webike.archive"])
 
 
-def _move_to_problem_folder(directory: str, filename: str):
-    logger.warning(__("Move file {file} into problem folder in directory {dir}", file=filename, dir=directory))
+def _move_to_problem_folder(directory: Directory, filename: File):
+    logger.warning(__("Move file {file} into problem folder in directory {dir}", file=filename, dir=directory.name))
     _move_to_subfolder(directory, filename, config["webike.problem"])
 
 
-def _move_to_subfolder(directory: str, filename: str, subfolder: str):
-    os.rename(os.path.join(directory, filename), os.path.join(directory, subfolder, filename))
+def _move_to_subfolder(directory: Directory, filename: str, subfolder: str):
+    os.rename(os.path.join(directory.abs_path, filename), os.path.join(directory.abs_path, subfolder, filename))
 
 
 config = load_config(module_locator.module_path())

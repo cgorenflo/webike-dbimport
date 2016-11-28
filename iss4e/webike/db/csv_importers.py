@@ -9,6 +9,8 @@ from typing import Iterator, Tuple
 # noinspection PyPep8Naming
 from iss4e.util import BraceMessage as __
 
+from iss4e.webike.db.classes import *
+
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
 logger = logging.getLogger("iss4e.webike.db")
 
@@ -16,15 +18,15 @@ logger = logging.getLogger("iss4e.webike.db")
 class CSVImporter(object):
     __metaclass__ = ABCMeta
 
-    def read_logs(self, directory: str, files: Iterator[str]) -> Iterator[Tuple[str, str, dict]]:
+    def read_logs(self, directory: Directory, files: Iterator[File]) -> Iterator[Tuple[Directory, File, Data]]:
         """
         :returns an iterator over directories, log file names of their data
         """
         logger.info("Start reading log files")
         for file_name in files:
-            logger.debug(__("Read log file {file} in directory {dir}", file=file_name, dir=directory))
-            with open(os.path.join(directory, file_name)) as csv_file:
-                reader = self._get_reader(csv_file, directory)
+            logger.debug(__("Read log file {file} in directory {dir}", file=file_name, dir=directory.name))
+            with open(os.path.join(directory.abs_path, file_name)) as csv_file:
+                reader = self._get_reader(csv_file, directory.name)
                 data = self._format(reader)
                 if data["points"]:
                     yield directory, file_name, data
@@ -77,7 +79,7 @@ class CSVImporter(object):
         pass
 
     @abstractmethod
-    def _get_reader(self, csv_file: TextIOWrapper, file_directory: str) -> DictReader:
+    def _get_reader(self, csv_file: TextIOWrapper, directory_name: str) -> DictReader:
         pass
 
 
@@ -88,8 +90,8 @@ class LegacyImporter(CSVImporter):
     def _get_imei(self, row: dict) -> str:
         return self.imei
 
-    def _get_reader(self, csv_file: TextIOWrapper, file_directory: str) -> DictReader:
-        self.imei = os.path.basename(os.path.normpath(file_directory))
+    def _get_reader(self, csv_file: TextIOWrapper, directory_name: str) -> DictReader:
+        self.imei = directory_name
         return DictReader(csv_file, fieldnames=["timestamp",
                                                 "class",
                                                 "code_version",
@@ -140,7 +142,7 @@ class WellFormedCSVImporter(CSVImporter):
     def _get_imei(self, row: dict) -> str:
         return row.pop("IMEI")
 
-    def _get_reader(self, csv_file: TextIOWrapper, file_directory: str) -> DictReader:
+    def _get_reader(self, csv_file: TextIOWrapper, directory_name: str) -> DictReader:
         return DictReader(csv_file)
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
