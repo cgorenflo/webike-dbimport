@@ -48,6 +48,8 @@ def import_data():
         directory = Directory(os.path.basename(directory_path), directory_path)
         file = os.path.basename(arguments["FILE"])
 
+        logger.debug(__("directory: {dir}, file:{file}",dir=directory, file=file))
+
         _execute_import(csv_importer(), file_system_access, directory, file)
     else:
 
