@@ -39,8 +39,6 @@ def import_data():
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
 
-    file_system_access = FileSystemAccess(logger)
-
     if arguments["FILE"] is not None:
         file_path = arguments["FILE"]
         if not os.path.isabs(file_path):
@@ -52,12 +50,12 @@ def import_data():
 
         logger.debug(__("directory: {dir}, file:{file}",dir=directory, file=file))
 
-        _execute_import(csv_importer(), file_system_access, directory, file)
+        _execute_import(csv_importer(), FileSystemAccess(logger), directory, file)
     else:
 
-        directories = file_system_access.get_directories(config["webike.imei_regex"])
+        directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_importer(), file_system_access, directory) for directory in
+            futures = [executor.submit(_execute_import, csv_importer(), FileSystemAccess(logger), directory) for directory in
                        directories]
 
             wait(futures)
