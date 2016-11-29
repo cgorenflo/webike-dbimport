@@ -95,9 +95,9 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
             except KeyboardInterrupt:
                 logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename,
                                 directory=directory.name))
-            except:
-                logger.error(
-                    __("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
+            except Exception as exception:
+                logger.exception(
+                    __("Error with file {filename} in {directory}:", filename=filename, directory=directory.name))
                 _move_to_problem_folder(directory, filename)
 
 
