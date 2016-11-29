@@ -32,7 +32,8 @@ class CSVImporter(object):
                     yield directory, file_name, data
                 else:
                     logger.warning(
-                        __("No sensor data read from file {file} in directory {dir}", file=file_name, dir=directory.name))
+                        __("No sensor data read from file {file} in directory {dir}", file=file_name,
+                           dir=directory.name))
                     yield directory, file_name, None
 
         return []

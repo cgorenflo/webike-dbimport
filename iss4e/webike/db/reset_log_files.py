@@ -6,14 +6,17 @@ import logging
 from docopt import docopt
 from iss4e.util.config import load_config
 
-from iss4e.webike.db.import_data import get_directories
 from iss4e.webike.db import module_locator
+# noinspection PyPep8Naming
 from iss4e.util import BraceMessage as __
+
+from iss4e.webike.db.file_system_access import FileSystemAccess
 
 
 def reset():
     logger.info(__("Getting all necessary directories"))
-    directories = get_directories()
+    file_system_access = FileSystemAccess(logger)
+    directories = file_system_access.get_directories(config["webike.imei_regex"])
     for directory in directories:
         logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory))
         archive = os.path.join(directory, config["webike.archive"])
@@ -27,7 +30,7 @@ def _move_to_parent(directory):
     files = os.listdir(directory)
     for file in files:
         full_file_name = os.path.join(directory, file)
-        if (os.path.isfile(full_file_name)):
+        if os.path.isfile(full_file_name):
             os.rename(full_file_name, os.path.join(directory, os.path.pardir))
 
 

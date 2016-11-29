@@ -16,7 +16,6 @@ Options:
   -d --debug    Logs messages at DEBUG level
 
 """
-import re
 from concurrent.futures import ProcessPoolExecutor, wait
 
 import iss4e.db.influxdb as influxdb
@@ -27,6 +26,7 @@ from iss4e.util.config import load_config
 
 from iss4e.webike.db import module_locator
 from iss4e.webike.db.csv_importers import *
+from iss4e.webike.db.file_system_access import FileSystemAccess
 
 
 def import_data():
@@ -39,6 +39,8 @@ def import_data():
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
 
+    file_system_access = FileSystemAccess(logger)
+
     if arguments["FILE"] is not None:
         directory_path = os.path.dirname(arguments["FILE"])
         if not os.path.isabs(directory_path):
@@ -46,59 +48,29 @@ def import_data():
         directory = Directory(os.path.basename(directory_path), directory_path)
         file = os.path.basename(arguments["FILE"])
 
-        _execute_import(csv_importer(), directory, file)
+        _execute_import(csv_importer(), file_system_access, directory, file)
     else:
-        directories = get_directories()
+
+        directories = file_system_access.get_directories(config["webike.imei_regex"])
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in directories]
+            futures = [executor.submit(_execute_import, csv_importer(), file_system_access, directory) for directory in
+                       directories]
 
             wait(futures)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
+def _execute_import(csv_importer: CSVImporter, file_system_access: FileSystemAccess, directory: Directory,
+                    file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
-        files = get_files_in_directory(file_regex_pattern, directory)
+        files = file_system_access.get_files_in_directory(file_regex_pattern, directory)
     else:
         files = [file]
     logs = csv_importer.read_logs(directory, files)
     _insert_into_db_and_archive_logs(logs)
 
     return True
-
-
-def get_directories() -> Iterator[Directory]:
-    """
-    :returns an iterator over directories and log file names
-    """
-    logger.info("Start collecting log file directories")
-
-    directory_regex_pattern = config["webike.imei_regex"]
-
-    home, dirs, _ = next(os.walk(os.path.expanduser("~")))
-    for directory in dirs:
-        if re.fullmatch(directory_regex_pattern, directory):
-            yield Directory(directory, os.path.join(home, directory))
-
-    return []
-
-
-def get_files_in_directory(file_regex_pattern: str, directory: Directory) -> Iterator[File]:
-    logger.debug(__("Collect logs in directory {directory}", directory=directory.name))
-    _, _, files = next(os.walk(directory.abs_path))
-    for file in files:
-        if _filter_correct_files(file, file_regex_pattern):
-            yield file
-
-    return []
-
-
-def _filter_correct_files(file: str, regex: str) -> bool:
-    if re.fullmatch(regex, file):
-        logger.debug(__("Collect log file {log}", log=file))
-        return True
-    return False
 
 
 def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, File, Data]]):
