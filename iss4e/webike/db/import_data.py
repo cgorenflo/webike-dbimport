@@ -45,7 +45,7 @@ def import_data():
         file_path = arguments["FILE"]
         if not os.path.isabs(file_path):
             file_path = os.path.join(os.getcwd(), file_path)
-        
+
         directory_path = os.path.dirname(file_path)
         directory = Directory(os.path.basename(directory_path), directory_path)
         file = os.path.basename(file_path)
