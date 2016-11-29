@@ -38,7 +38,7 @@ def import_data():
     else:
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
-    
+
     if arguments["FILE"] is not None:
         directory_path = os.path.dirname(arguments["FILE"])
         if not os.path.isabs(directory_path):
@@ -48,7 +48,7 @@ def import_data():
 
         _execute_import(csv_importer(), directory, file)
     else:
-        directories = _get_directories()
+        directories = get_directories()
         with ProcessPoolExecutor(max_workers=14) as executor:
             futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in directories]
 
@@ -59,7 +59,7 @@ def import_data():
 def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
-        files = _get_files_in_directory(file_regex_pattern, directory)
+        files = get_files_in_directory(file_regex_pattern, directory)
     else:
         files = [file]
     logs = csv_importer.read_logs(directory, files)
@@ -68,7 +68,7 @@ def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File 
     return True
 
 
-def _get_directories() -> Iterator[Directory]:
+def get_directories() -> Iterator[Directory]:
     """
     :returns an iterator over directories and log file names
     """
@@ -84,7 +84,7 @@ def _get_directories() -> Iterator[Directory]:
     return []
 
 
-def _get_files_in_directory(file_regex_pattern: str, directory: Directory) -> Iterator[File]:
+def get_files_in_directory(file_regex_pattern: str, directory: Directory) -> Iterator[File]:
     logger.debug(__("Collect logs in directory {directory}", directory=directory.name))
     _, _, files = next(os.walk(directory.abs_path))
     for file in files:
@@ -120,9 +120,11 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
                     _move_to_problem_folder(directory, filename)
             # try to import as many logs as possible, so just log any unexpected exceptions and keep going
             except KeyboardInterrupt:
-                logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename, directory=directory.name))
+                logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename,
+                                directory=directory.name))
             except:
-                logger.error(__("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
+                logger.error(
+                    __("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
                 _move_to_problem_folder(directory, filename)
 
 
@@ -143,7 +145,6 @@ def _move_to_subfolder(directory: Directory, filename: str, subfolder: str):
 arguments = docopt(__doc__)
 
 config = load_config(module_locator.module_path())
-logging.config.dictConfig(config["logging"])
 logger = logging.getLogger("iss4e.webike.db")
 if arguments["--debug"]:
     logger.setLevel(logging.DEBUG)
