@@ -42,11 +42,13 @@ def import_data():
     file_system_access = FileSystemAccess(logger)
 
     if arguments["FILE"] is not None:
-        directory_path = os.path.dirname(arguments["FILE"])
-        if not os.path.isabs(directory_path):
-            directory_path = os.path.join(os.getcwd(), directory_path)
+        file_path = arguments["FILE"]
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(os.getcwd(), file_path)
+        
+        directory_path = os.path.dirname(file_path)
         directory = Directory(os.path.basename(directory_path), directory_path)
-        file = os.path.basename(arguments["FILE"])
+        file = os.path.basename(file_path)
 
         logger.debug(__("directory: {dir}, file:{file}",dir=directory, file=file))
 
