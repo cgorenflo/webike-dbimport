@@ -17,15 +17,15 @@ def reset():
     file_system_access = FileSystemAccess(logger)
     directories = file_system_access.get_directories(config["webike.imei_regex"])
     for directory in directories:
-        logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory))
-        archive = os.path.join(directory, config["webike.archive"])
+        logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory.name))
+        archive = os.path.join(directory.abs_path, config["webike.archive"])
         _move_to_parent(archive)
-        logger.info("Moving files from problem folder in {dir} back to main folder.", dir=directory)
-        problem = os.path.join(directory, config["webike.problem"])
+        logger.info("Moving files from problem folder in {dir} back to main folder.", dir=directory.name)
+        problem = os.path.join(directory.abs_path, config["webike.problem"])
         _move_to_parent(problem)
 
 
-def _move_to_parent(directory):
+def _move_to_parent(directory:str):
     files = os.listdir(directory)
     for file in files:
         full_file_name = os.path.join(directory, file)
