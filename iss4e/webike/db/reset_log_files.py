@@ -6,13 +6,13 @@ import logging
 from docopt import docopt
 from iss4e.util.config import load_config
 
-from iss4e.webike.db import import_data
+from iss4e.webike.db.import_data import get_directories
 from iss4e.webike.db import module_locator
 from iss4e.util import BraceMessage as __
 
 
 def reset():
-    directories = import_data.get_directories()
+    directories = get_directories()
     for directory in directories:
         logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory))
         archive = os.path.join(directory, config["webike.archive"])
