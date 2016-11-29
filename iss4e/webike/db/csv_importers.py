@@ -142,8 +142,10 @@ class LegacyImporter(CSVImporter):
                 row.pop("step_count")
                 row.pop("significant_motion")
                 row.pop("phone_ip")
+                return True
             else:
                 logger.debug(__("Code version is {version}", version=row["code_version"]))
+                return False
         except (ValueError, SyntaxError):
             logger.debug(__("'code_version' field could not be parsed. Value: {value}", value=row["code_version"]))
             return False
