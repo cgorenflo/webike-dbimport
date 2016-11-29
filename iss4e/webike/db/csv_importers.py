@@ -43,6 +43,9 @@ class CSVImporter(object):
         :param reader: log file data
         :returns formatted data
         """
+
+        logger.debug("Formatting row")
+
         return {"points": [{"measurement": "sensor_data",
                             "tags": {"imei": self._get_imei(row)},
                             "time": row.pop("timestamp"),
@@ -128,6 +131,8 @@ class LegacyImporter(CSVImporter):
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
         try:
+            logger.debug("Check if code version is correct")
+
             # old log files contain rows with written log messages instead of sensor data,
             # so there might be an unparsable string in the 'code_version' field
             if ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION:
