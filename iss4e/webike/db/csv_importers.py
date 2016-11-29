@@ -130,7 +130,11 @@ class LegacyImporter(CSVImporter):
         try:
             # old log files contain rows with written log messages instead of sensor data,
             # so there might be an unparsable string in the 'code_version' field
-            return ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION
+            if ast.literal_eval(row["code_version"]) < NEW_IMPORT_FORMAT_CODE_VERSION:
+                row.pop("class")
+                row.pop("step_count")
+                row.pop("significant_motion")
+                row.pop("phone_ip")
         except (ValueError, SyntaxError):
             logger.debug(__("'code_version' field could not be parsed. Value: {value}", value=row["code_version"]))
             return False
