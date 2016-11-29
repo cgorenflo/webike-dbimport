@@ -3,7 +3,6 @@
 import os
 
 import logging
-from docopt import docopt
 from iss4e.util.config import load_config
 
 from iss4e.webike.db import module_locator
@@ -33,8 +32,6 @@ def _move_to_parent(directory):
         if os.path.isfile(full_file_name):
             os.rename(full_file_name, os.path.join(directory, os.path.pardir))
 
-
-arguments = docopt(__doc__)
 
 config = load_config(module_locator.module_path())
 logger = logging.getLogger("iss4e.webike.db.reset")
