@@ -38,7 +38,7 @@ def import_data():
     else:
         logger.info("Using formatter for well formed csv files")
         csv_importer = WellFormedCSVImporter
-    
+
     if arguments["FILE"] is not None:
         directory_path = os.path.dirname(arguments["FILE"])
         if not os.path.isabs(directory_path):
@@ -120,9 +120,11 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
                     _move_to_problem_folder(directory, filename)
             # try to import as many logs as possible, so just log any unexpected exceptions and keep going
             except KeyboardInterrupt:
-                logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename, directory=directory.name))
+                logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename,
+                                directory=directory.name))
             except:
-                logger.error(__("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
+                logger.error(
+                    __("Error with file {filename} in {directory}", filename=filename, directory=directory.name))
                 _move_to_problem_folder(directory, filename)
 
 
