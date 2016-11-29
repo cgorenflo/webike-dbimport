@@ -20,7 +20,7 @@ def reset():
         logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory.name))
         archive = os.path.join(directory.abs_path, config["webike.archive"])
         _move_to_parent(archive)
-        logger.info("Moving files from problem folder in {dir} back to main folder.", dir=directory.name)
+        logger.info(__("Moving files from problem folder in {dir} back to main folder.", dir=directory.name))
         problem = os.path.join(directory.abs_path, config["webike.problem"])
         _move_to_parent(problem)
 
