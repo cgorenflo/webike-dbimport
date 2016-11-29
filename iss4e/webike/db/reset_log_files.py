@@ -12,6 +12,7 @@ from iss4e.util import BraceMessage as __
 
 
 def reset():
+    logger.info(__("Getting all necessary directories"))
     directories = get_directories()
     for directory in directories:
         logger.info(__("Moving files from archive folder in {dir} back to main folder.", dir=directory))
