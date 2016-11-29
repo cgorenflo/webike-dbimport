@@ -48,25 +48,24 @@ def import_data():
         directory = Directory(os.path.basename(directory_path), directory_path)
         file = os.path.basename(file_path)
 
-        logger.debug(__("directory: {dir}, file:{file}",dir=directory, file=file))
+        logger.debug(__("directory: {dir}, file:{file}", dir=directory, file=file))
 
-        _execute_import(csv_importer(), FileSystemAccess(logger), directory, file)
+        _execute_import(csv_importer(), directory, file)
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_importer(), FileSystemAccess(logger), directory) for directory in
+            futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in
                        directories]
 
             wait(futures)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVImporter, file_system_access: FileSystemAccess, directory: Directory,
-                    file: File = None) -> bool:
+def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
-        files = file_system_access.get_files_in_directory(file_regex_pattern, directory)
+        files = FileSystemAccess(logger).get_files_in_directory(file_regex_pattern, directory)
     else:
         files = [file]
     logs = csv_importer.read_logs(directory, files)
