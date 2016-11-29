@@ -25,12 +25,12 @@ def reset():
         _move_to_parent(problem)
 
 
-def _move_to_parent(directory:str):
+def _move_to_parent(directory: str):
     files = os.listdir(directory)
     for file in files:
         full_file_name = os.path.join(directory, file)
         if os.path.isfile(full_file_name):
-            os.rename(full_file_name, os.path.join(directory, os.path.pardir))
+            os.rename(full_file_name, os.path.join(os.path.join(directory, os.path.pardir), file))
 
 
 config = load_config(module_locator.module_path())
