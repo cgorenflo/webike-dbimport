@@ -68,6 +68,8 @@ def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = 
     logs = csv_importer.read_logs(directory, files)
     try:
         _insert_into_db_and_archive_logs(logs)
+    except KeyboardInterrupt:
+        raise
     except:
         logger.exception("Unexpected Exception")
 
@@ -95,6 +97,7 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
             except KeyboardInterrupt:
                 logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename,
                                 directory=directory.name))
+                raise
             except Exception as exception:
                 logger.exception(
                     __("Error with file {filename} in {directory}:", filename=filename, directory=directory.name))
