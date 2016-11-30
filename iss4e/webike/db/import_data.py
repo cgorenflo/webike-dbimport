@@ -3,7 +3,7 @@
 """Imports all sensor data log files in the imei folders into the influxdb database
 
 Usage:
-  import_data.py [FILE] [--version=VERSION_NUMBER] [-s | --strict] [-d | --debug]
+  import_data.py [FILE] [--version=VERSION_NUMBER] [-s | --strict] [-a | --archive] [-d | --debug]
 
 Optional Arguments:
   FILE          Imports a single file
@@ -14,6 +14,7 @@ Options:
   -s --strict               Moves logs that could not be imported into a problem folder.
                             Files stay in place if this is not set
   -d --debug                Logs messages at DEBUG level
+  -a --archive              Move all log files from the main folders into the archives
 
 """
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -80,13 +81,19 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
     """
     :param path_and_data: an iterator over directories, log file names of their data
     """
-    logger.info("Start uploading log files")
+
+    if arguments["--archive"]:
+        logger.info("Start archiving all files")
+    else:
+        logger.info("Start uploading log files")
 
     with influxdb.connect(**config["webike.influx"]) as client:
         for directory, filename, data in path_and_data:
             # noinspection PyBroadException
             try:
-                if data is not None:
+                if arguments["--archive"]:
+                    _archive_log(directory, filename)
+                elif data is not None:
                     logger.debug(__("Upload file {file}", file=filename))
                     logger.debug(data)
                     client.write(data, {"db": config["webike.influx.database"]})
