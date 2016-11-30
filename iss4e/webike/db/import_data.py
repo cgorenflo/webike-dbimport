@@ -6,7 +6,7 @@ Usage:
   import_data.py [FILE] [--version=VERSION_NUMBER] [-s | --strict] [-a | --archive] [-d | --debug]
 
 Optional Arguments:
-  FILE          Imports a single file
+  FILE                      Imports a single file
 
 Options:
   -h --help                 Show this screen.
