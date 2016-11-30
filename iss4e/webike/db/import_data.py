@@ -34,7 +34,7 @@ def import_data():
 
     parsers = [V1Parser, V2Parser, V3Parser]
     logger.info(__("Using parser version {version}", version=arguments["--version"]))
-    csv_parser = parsers[arguments["--version"] - 1]
+    csv_parser = parsers[int(arguments["--version"]) - 1]
 
     if arguments["FILE"] is not None:
         file_path = arguments["FILE"]
@@ -66,7 +66,10 @@ def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = 
     else:
         files = [file]
     logs = csv_importer.read_logs(directory, files)
-    _insert_into_db_and_archive_logs(logs)
+    try:
+        _insert_into_db_and_archive_logs(logs)
+    except:
+        logger.exception("Unexpected Exception")
 
     return True
 

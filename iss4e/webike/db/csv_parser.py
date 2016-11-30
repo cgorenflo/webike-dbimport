@@ -133,9 +133,13 @@ class V1Parser(CSVParser):
 
     def _filter_for_correct_log_format(self, row: dict) -> bool:
         logger.debug(__("Check row length: {row}", row=row))
-        # old log files contain rows with written log messages instead of sensor data,
-        # so there might be an unparsable string in the 'code_version' field
-        if not row["surplus"]:
+        # v1 log files contain rows with written log messages instead of sensor data,
+        # so there might be an unparsable string in the 'latitude' field
+        # Additionally, they have fewer rows than later logs
+
+        # latitude must be unequal if latitude can be parsed into a float
+        if row["latitude"] != CSVParser._get_value("latitude", row["latitude"]) \
+                and not ("surplus" in row.keys() and row["surplus"]):
             row.pop("class")
             row.pop("step_count")
             row.pop("significant_motion")
