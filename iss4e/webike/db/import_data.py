@@ -3,17 +3,17 @@
 """Imports all sensor data log files in the imei folders into the influxdb database
 
 Usage:
-  import_data.py [FILE] [-l | --legacy] [-s | --strict] [-d | --debug]
+  import_data.py [FILE] [--version=VERSION_NUMBER] [-s | --strict] [-d | --debug]
 
 Optional Arguments:
   FILE          Imports a single file
 
 Options:
-  -h --help     Show this screen.
-  -l --legacy   Use legacy parser for old data formats
-  -s --strict   Moves logs that could not be imported into a problem folder.
-                Files stay in place if this is not set
-  -d --debug    Logs messages at DEBUG level
+  -h --help                 Show this screen.
+  --version=VERSION_NUMBER  Imports data log files using a parser for the specified format version [default: 3]
+  -s --strict               Moves logs that could not be imported into a problem folder.
+                            Files stay in place if this is not set
+  -d --debug                Logs messages at DEBUG level
 
 """
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -25,19 +25,16 @@ from iss4e.util import BraceMessage as __
 from iss4e.util.config import load_config
 
 from iss4e.webike.db import module_locator
-from iss4e.webike.db.csv_importers import *
+from iss4e.webike.db.csv_parser import *
 from iss4e.webike.db.file_system_access import FileSystemAccess
 
 
 def import_data():
     logger.info("Start log file import")
 
-    if arguments["--legacy"]:
-        logger.info("Using legacy formatter")
-        csv_importer = LegacyImporter
-    else:
-        logger.info("Using formatter for well formed csv files")
-        csv_importer = WellFormedCSVImporter
+    parsers = [V1Parser, V2Parser, V3Parser]
+    logger.info(__("Using parser version {version}", version=arguments["--version"]))
+    csv_parser = parsers[arguments["--version"] - 1]
 
     if arguments["FILE"] is not None:
         file_path = arguments["FILE"]
@@ -50,19 +47,19 @@ def import_data():
 
         logger.debug(__("directory: {dir}, file:{file}", dir=directory, file=file))
 
-        _execute_import(csv_importer(), directory, file)
+        _execute_import(csv_parser(), directory, file)
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in
+            futures = [executor.submit(_execute_import, csv_parser(), directory) for directory in
                        directories]
 
             wait(futures)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
+def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
         files = FileSystemAccess(logger).get_files_in_directory(file_regex_pattern, directory)
