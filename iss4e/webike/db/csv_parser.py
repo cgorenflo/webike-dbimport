@@ -93,6 +93,7 @@ class V1Parser(CSVParser):
             return True
         else:
             logger.debug(__("Value {value} denied", value=value))
+            return False
 
     def _get_imei(self, row: dict) -> str:
         return self.imei
@@ -137,8 +138,9 @@ class V1Parser(CSVParser):
         # so there might be an unparsable string in the 'latitude' field
         # Additionally, they have fewer rows than later logs
 
-        # latitude must be unequal if latitude can be parsed into a float
-        if row["latitude"] != CSVParser._get_value("latitude", row["latitude"]) \
+        # the latitude string value must be unequal to the parsed value or 'NaN',
+        # if latitude contains a sensible float value
+        if (row["latitude"].lower() == "nan" or row["latitude"] != CSVParser._get_value("latitude", row["latitude"]))  \
                 and not ("surplus" in row.keys() and row["surplus"]):
             row.pop("class")
             row.pop("step_count")
