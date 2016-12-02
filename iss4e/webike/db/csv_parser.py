@@ -32,7 +32,7 @@ class CSVParser(object):
                 if data["points"]:
                     yield directory, file_name, data
                 else:
-                    logger.warning(
+                    logger.info(
                         __("No sensor data read from file {file} in directory {dir}", file=file_name,
                            dir=directory.name))
                     yield directory, file_name, None
