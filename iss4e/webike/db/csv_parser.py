@@ -16,7 +16,7 @@ NEW_IMPORT_FORMAT_CODE_VERSION = 21
 logger = logging.getLogger("iss4e.webike.db")
 
 
-class CSVImporter(object):
+class CSVParser(object):
     __metaclass__ = ABCMeta
 
     def read_logs(self, directory: Directory, files: Iterator[File]) -> Iterator[Tuple[Directory, File, Data]]:
@@ -88,16 +88,72 @@ class CSVImporter(object):
         pass
 
 
-class LegacyImporter(CSVImporter):
+class V1Parser(CSVParser):
     def _filter_for_correct_value_format(self, value: str) -> bool:
         if value and value.lower() != "null" and value.lower() != "nan":
             return True
         else:
             logger.debug(__("Value {value} denied", value=value))
+            return False
 
     def _get_imei(self, row: dict) -> str:
         return self.imei
 
+    def _get_reader(self, csv_file: TextIOWrapper, directory_name: str) -> DictReader:
+        self.imei = directory_name
+        return DictReader(csv_file, fieldnames=["timestamp",
+                                                "class",
+                                                "latitude",
+                                                "longitude",
+                                                "network_latitude",
+                                                "network_longitude",
+                                                "acceleration_x",
+                                                "acceleration_y",
+                                                "acceleration_z",
+                                                "magnetic_field_x",
+                                                "magnetic_field_y",
+                                                "magnetic_field_z",
+                                                "gyroscope_x",
+                                                "gyroscope_y",
+                                                "gyroscope_z",
+                                                "atmospheric_pressure",
+                                                "light_level",
+                                                "gravitational_acceleration",
+                                                "linear_acceleration_x",
+                                                "linear_acceleration_y",
+                                                "linear_acceleration_z",
+                                                "step_count",
+                                                "battery_temperature",
+                                                "ambient_temperature",
+                                                "voltage",
+                                                "charging_current",
+                                                "significant_motion",
+                                                "proximity_sensor",
+                                                "phone_ip",
+                                                "phone_battery_state"],
+                          restkey="surplus")
+
+    def _filter_for_correct_log_format(self, row: dict) -> bool:
+        logger.debug(__("Check row length: {row}", row=row))
+        # v1 log files contain rows with written log messages instead of sensor data,
+        # so there might be an unparsable string in the 'latitude' field
+        # Additionally, they have fewer rows than later logs
+
+        # the latitude string value must be unequal to the parsed value or 'NaN',
+        # if latitude contains a sensible float value
+        if (row["latitude"].lower() == "nan" or row["latitude"] != CSVParser._get_value("latitude", row["latitude"]))  \
+                and not ("surplus" in row.keys() and row["surplus"]):
+            row.pop("class")
+            row.pop("step_count")
+            row.pop("significant_motion")
+            row.pop("phone_ip")
+            return True
+        else:
+            logger.debug(__("Row has {column_count} columns instead of 30", column_count=len(row)))
+            return False
+
+
+class V2Parser(V1Parser):
     def _get_reader(self, csv_file: TextIOWrapper, directory_name: str) -> DictReader:
         self.imei = directory_name
         return DictReader(csv_file, fieldnames=["timestamp",
@@ -152,7 +208,7 @@ class LegacyImporter(CSVImporter):
             return False
 
 
-class WellFormedCSVImporter(CSVImporter):
+class V3Parser(CSVParser):
     def _filter_for_correct_value_format(self, value: str) -> bool:
         return bool(value)
 

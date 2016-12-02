@@ -3,17 +3,18 @@
 """Imports all sensor data log files in the imei folders into the influxdb database
 
 Usage:
-  import_data.py [FILE] [-l | --legacy] [-s | --strict] [-d | --debug]
+  import_data.py [FILE] [--version=VERSION_NUMBER] [-s | --strict] [-a | --archive] [-d | --debug]
 
 Optional Arguments:
-  FILE          Imports a single file
+  FILE                      Imports a single file
 
 Options:
-  -h --help     Show this screen.
-  -l --legacy   Use legacy parser for old data formats
-  -s --strict   Moves logs that could not be imported into a problem folder.
-                Files stay in place if this is not set
-  -d --debug    Logs messages at DEBUG level
+  -h --help                 Show this screen.
+  --version=VERSION_NUMBER  Imports data log files using a parser for the specified format version [default: 3]
+  -s --strict               Moves logs that could not be imported into a problem folder.
+                            Files stay in place if this is not set
+  -d --debug                Logs messages at DEBUG level
+  -a --archive              Move all log files from the main folders into the archives
 
 """
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -25,19 +26,16 @@ from iss4e.util import BraceMessage as __
 from iss4e.util.config import load_config
 
 from iss4e.webike.db import module_locator
-from iss4e.webike.db.csv_importers import *
+from iss4e.webike.db.csv_parser import *
 from iss4e.webike.db.file_system_access import FileSystemAccess
 
 
 def import_data():
     logger.info("Start log file import")
 
-    if arguments["--legacy"]:
-        logger.info("Using legacy formatter")
-        csv_importer = LegacyImporter
-    else:
-        logger.info("Using formatter for well formed csv files")
-        csv_importer = WellFormedCSVImporter
+    parsers = [V1Parser, V2Parser, V3Parser]
+    logger.info(__("Using parser version {version}", version=arguments["--version"]))
+    csv_parser = parsers[int(arguments["--version"]) - 1]
 
     if arguments["FILE"] is not None:
         file_path = arguments["FILE"]
@@ -50,26 +48,31 @@ def import_data():
 
         logger.debug(__("directory: {dir}, file:{file}", dir=directory, file=file))
 
-        _execute_import(csv_importer(), directory, file)
+        _execute_import(csv_parser(), directory, file)
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_importer(), directory) for directory in
+            futures = [executor.submit(_execute_import, csv_parser(), directory) for directory in
                        directories]
 
             wait(futures)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVImporter, directory: Directory, file: File = None) -> bool:
+def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
         files = FileSystemAccess(logger).get_files_in_directory(file_regex_pattern, directory)
     else:
         files = [file]
     logs = csv_importer.read_logs(directory, files)
-    _insert_into_db_and_archive_logs(logs)
+    try:
+        _insert_into_db_and_archive_logs(logs)
+    except KeyboardInterrupt:
+        raise
+    except:
+        logger.exception("Unexpected Exception")
 
     return True
 
@@ -78,13 +81,19 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
     """
     :param path_and_data: an iterator over directories, log file names of their data
     """
-    logger.info("Start uploading log files")
+
+    if arguments["--archive"]:
+        logger.info("Start archiving all files")
+    else:
+        logger.info("Start uploading log files")
 
     with influxdb.connect(**config["webike.influx"]) as client:
         for directory, filename, data in path_and_data:
             # noinspection PyBroadException
             try:
-                if data is not None:
+                if arguments["--archive"]:
+                    _archive_log(directory, filename)
+                elif data is not None:
                     logger.debug(__("Upload file {file}", file=filename))
                     logger.debug(data)
                     client.write(data, {"db": config["webike.influx.database"]})
@@ -95,6 +104,7 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
             except KeyboardInterrupt:
                 logger.error(__("Interrupted by user at file {filename} in {directory}", filename=filename,
                                 directory=directory.name))
+                raise
             except Exception as exception:
                 logger.exception(
                     __("Error with file {filename} in {directory}:", filename=filename, directory=directory.name))
