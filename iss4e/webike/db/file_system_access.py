@@ -24,7 +24,7 @@ class FileSystemAccess(object):
             if re.fullmatch(directory_regex_pattern, directory):
                 yield Directory(directory, os.path.join(home, directory))
 
-        return []
+        return ()
 
     def get_files_in_directory(self, file_regex_pattern: str, directory: Directory) -> Iterator[File]:
         self._logger.debug(__("Collect logs in directory {directory}", directory=directory.name))
@@ -33,7 +33,7 @@ class FileSystemAccess(object):
             if self._filter_correct_files(file, file_regex_pattern):
                 yield file
 
-        return []
+        return ()
 
     def _filter_correct_files(self, file: str, regex: str) -> bool:
         if re.fullmatch(regex, file):

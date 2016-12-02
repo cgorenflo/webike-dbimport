@@ -10,6 +10,7 @@ from typing import Iterator, Tuple
 from iss4e.util import BraceMessage as __
 
 from iss4e.webike.db.classes import *
+from iss4e.webike.db.date_time import DateTime
 
 NEW_IMPORT_FORMAT_CODE_VERSION = 21
 logger = logging.getLogger("iss4e.webike.db")
@@ -36,7 +37,7 @@ class CSVImporter(object):
                            dir=directory.name))
                     yield directory, file_name, None
 
-        return []
+        return ()
 
     def _format(self, reader: DictReader) -> dict:
         """
@@ -48,7 +49,7 @@ class CSVImporter(object):
 
         return {"points": [{"measurement": "sensor_data",
                             "tags": {"imei": self._get_imei(row)},
-                            "time": row.pop("timestamp"),
+                            "time": DateTime.from_string(row.pop("timestamp"), 'Canada/Eastern').utc_time,
                             "fields": self._get_fields_with_correct_data_type(row)
                             } for row in reader if self._filter_for_correct_log_format(row)]}
 
