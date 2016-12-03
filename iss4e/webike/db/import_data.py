@@ -54,7 +54,9 @@ def import_data():
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
-        queue = SyncManager().Queue()
+        manager = SyncManager()
+        manager.start()
+        queue = manager.Queue()
         with ProcessPoolExecutor(max_workers=14) as executor:
             futures = [executor.submit(_execute_import, csv_parser(), directory, queue) for directory in
                        directories]
