@@ -91,7 +91,7 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
         logger.info("Start uploading log files")
 
     with influxdb.connect(**config["webike.influx"]) as client:
-        for directory, filename, data in progress(path_and_data, queue):
+        for directory, filename, data in progress(path_and_data, delay=10, remote=queue):
             # noinspection PyBroadException
             try:
                 if arguments["--archive"]:
