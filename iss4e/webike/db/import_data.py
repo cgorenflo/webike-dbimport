@@ -18,12 +18,14 @@ Options:
 
 """
 from concurrent.futures import ProcessPoolExecutor, wait
+from multiprocessing.managers import SyncManager
 
 import iss4e.db.influxdb as influxdb
 from docopt import docopt
 # noinspection PyPep8Naming
-from iss4e.util import BraceMessage as __
+from iss4e.util import BraceMessage as __, progress, async_progress
 from iss4e.util.config import load_config
+from multiprocessing import Queue
 
 from iss4e.webike.db import module_locator
 from iss4e.webike.db.csv_parser import *
@@ -52,15 +54,16 @@ def import_data():
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
+        queue = SyncManager().Queue()
         with ProcessPoolExecutor(max_workers=14) as executor:
-            futures = [executor.submit(_execute_import, csv_parser(), directory) for directory in
+            futures = [executor.submit(_execute_import, csv_parser(), directory, queue) for directory in
                        directories]
 
-            wait(futures)
+            async_progress(futures, queue)
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = None) -> bool:
+def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = None, queue: Queue = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
         files = FileSystemAccess(logger).get_files_in_directory(file_regex_pattern, directory)
@@ -68,7 +71,7 @@ def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = 
         files = [file]
     logs = csv_importer.read_logs(directory, files)
     try:
-        _insert_into_db_and_archive_logs(logs)
+        _insert_into_db_and_archive_logs(logs, queue)
     except KeyboardInterrupt:
         raise
     except:
@@ -77,7 +80,7 @@ def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = 
     return True
 
 
-def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, File, Data]]):
+def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, File, Data]], queue: Queue = None):
     """
     :param path_and_data: an iterator over directories, log file names of their data
     """
@@ -88,7 +91,7 @@ def _insert_into_db_and_archive_logs(path_and_data: Iterator[Tuple[Directory, Fi
         logger.info("Start uploading log files")
 
     with influxdb.connect(**config["webike.influx"]) as client:
-        for directory, filename, data in path_and_data:
+        for directory, filename, data in progress(path_and_data, queue):
             # noinspection PyBroadException
             try:
                 if arguments["--archive"]:
