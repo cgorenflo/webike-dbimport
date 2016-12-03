@@ -61,7 +61,7 @@ def import_data():
             futures = [executor.submit(_execute_import, csv_parser(), directory, queue) for directory in
                        directories]
 
-            async_progress(futures, queue)
+            async_progress(futures, queue, delay=10)
     logger.info("Import complete")
 
 
