@@ -50,7 +50,7 @@ def import_data():
 
         logger.debug(__("directory: {dir}, file:{file}", dir=directory, file=file))
 
-        _execute_import(csv_parser(), directory, file)
+        _execute_import(csv_parser(), directory, file=file)
     else:
 
         directories = FileSystemAccess(logger).get_directories(config["webike.imei_regex"])
@@ -65,7 +65,7 @@ def import_data():
     logger.info("Import complete")
 
 
-def _execute_import(csv_importer: CSVParser, directory: Directory, file: File = None, queue: Queue = None) -> bool:
+def _execute_import(csv_importer: CSVParser, directory: Directory, queue: Queue = None, file: File = None) -> bool:
     file_regex_pattern = config["webike.logfile_regex"]
     if file is None:
         files = FileSystemAccess(logger).get_files_in_directory(file_regex_pattern, directory)
